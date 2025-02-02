@@ -165,6 +165,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let WATER_TEMPERATURE = "WATER_TEMPERATURE"
     let UNDERWATER_DEPTH = "UNDERWATER_DEPTH"
     
+    let STAND_TIME = "STAND_TIME"
+    
     
     // Health Unit types
     // MOLE_UNIT_WITH_MOLAR_MASS, // requires molar mass input - not supported yet
@@ -829,6 +831,23 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 ]
             ])
             return
+        case "STAND_TIME":
+            let standTime = getStandTime(startDate: dateFrom, endDate: dateTo)
+            let totalScreenTime = standTime.values.reduce(0) { $0 + $1 }
+            let standTimeWithTimestamps = Dictionary(
+                uniqueKeysWithValues: standTime.map { (String(Int($0.key.timeIntervalSince1970 * 1000)), $0.value) }
+            )
+            result([
+                [
+                    "value": totalScreenTime,
+                    "date_from": Int(dateFrom.timeIntervalSince1970 * 1000),
+                    "date_to": Int(dateTo.timeIntervalSince1970 * 1000),
+                    "source_id": sourceIdForCharacteristic,
+                    "source_name": sourceNameForCharacteristic,
+                    "metadata": standTimeWithTimestamps,
+                ]
+            ])
+            return
         default:
             break
         }
@@ -1260,6 +1279,41 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         return bloodType
     }
     
+    func getStandTime(startDate: Date?, endDate: Date?) -> [Date: Double] {
+        let healthStore = HKHealthStore()
+        let semaphore = DispatchSemaphore(value: 0)
+        var dailyScreenTime: [Date: Double] = [:]
+
+        guard let screenTimeType = HKObjectType.categoryType(forIdentifier: .appleStandHour) else {
+            print("Screen time type not available")
+            return [:]
+        }
+
+        let calendar = Calendar.current
+        let start = startDate ?? calendar.startOfDay(for: Date())
+        let end = endDate ?? Date()
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: .strictStartDate)
+
+        let query = HKSampleQuery(sampleType: screenTimeType, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
+            if let categorySamples = samples as? [HKCategorySample] {
+                for sample in categorySamples {
+                    let date = calendar.startOfDay(for: sample.startDate)
+                    let duration = sample.endDate.timeIntervalSince(sample.startDate) // Duration in seconds
+                    
+                    dailyScreenTime[date, default: 0] += duration
+                }
+            }
+            semaphore.signal() // Signal that query is complete
+        }
+
+        healthStore.execute(query)
+        
+        // Wait for the query to finish (Blocking)
+        semaphore.wait()
+
+        return dailyScreenTime
+    }
+    
     func initializeTypes() {
         // Initialize units
         unitDict[GRAM] = HKUnit.gram()
@@ -1505,6 +1559,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataTypesDict[NUTRITION] = HKSampleType.correlationType(
                 forIdentifier: .food)!
             
+            dataTypesDict[STAND_TIME] = HKObjectType.categoryType(forIdentifier: .appleStandHour)!
+            
             healthDataTypes = Array(dataTypesDict.values)
             
             characteristicsTypesDict[BIRTH_DATE] = HKObjectType.characteristicType(forIdentifier: .dateOfBirth)!
@@ -1581,6 +1637,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataQuantityTypesDict[DISTANCE_SWIMMING] = HKQuantityType.quantityType(forIdentifier: .distanceSwimming)!
             dataQuantityTypesDict[DISTANCE_CYCLING] = HKQuantityType.quantityType(forIdentifier: .distanceCycling)!
             dataQuantityTypesDict[FLIGHTS_CLIMBED] = HKQuantityType.quantityType(forIdentifier: .flightsClimbed)!
+            
+            dataQuantityTypesDict[STAND_TIME] = HKQuantityType.quantityType(forIdentifier: .appleStandTime)!
             
             healthDataQuantityTypes = Array(dataQuantityTypesDict.values)
         }

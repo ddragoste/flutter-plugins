@@ -107,7 +107,9 @@ enum HealthDataType {
   ELECTROCARDIOGRAM,
 
   // Health Connect
-  TOTAL_CALORIES_BURNED
+  TOTAL_CALORIES_BURNED,
+
+  STAND_TIME,
 }
 
 /// Access types for Health Data.
@@ -212,6 +214,7 @@ const List<HealthDataType> dataTypeKeysIOS = [
   HealthDataType.MENSTRUATION_FLOW,
   HealthDataType.WATER_TEMPERATURE,
   HealthDataType.UNDERWATER_DEPTH,
+  HealthDataType.STAND_TIME,
 ];
 
 /// List of data types available on Android
@@ -365,6 +368,8 @@ const Map<HealthDataType, HealthDataUnit> dataTypeToUnit = {
 
   // Health Connect
   HealthDataType.TOTAL_CALORIES_BURNED: HealthDataUnit.KILOCALORIE,
+
+  HealthDataType.STAND_TIME: HealthDataUnit.NO_UNIT,
 };
 
 // const PlatformTypeJsonValue = {

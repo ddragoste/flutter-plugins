@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:carp_serializable/carp_serializable.dart';
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 import 'package:health_example/util.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:carp_serializable/carp_serializable.dart';
 
 // Global Health instance
 final health = Health();
@@ -80,6 +80,7 @@ class HealthAppState extends State<HealthApp> {
             HealthDataType.LOW_HEART_RATE_EVENT,
             HealthDataType.IRREGULAR_HEART_RATE_EVENT,
             HealthDataType.EXERCISE_TIME,
+            HealthDataType.STAND_TIME,
           ].contains(type)
               ? HealthDataAccess.READ
               : HealthDataAccess.READ_WRITE)
